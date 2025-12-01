@@ -1,0 +1,22 @@
+{
+    "KPackageStructure": "Plasma/Wallpaper",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "vcalles@gmail.com",
+                "Name": "Victor Calles"
+            },
+            {
+                "Email": "safonov.ivan.s@gmail.com",
+                "Name": "Ivan Safonov"
+            }
+        ],
+        "Category": "",
+        "Description": "Autum",
+        "Icon": "preferences-desktop-color",
+        "Id": "org.kde.autum",
+        "License": "GPLv2+",
+        "Name": "Autum"
+    },
+    "X-KDE-ParentApp": "org.kde.plasmashell"
+}
