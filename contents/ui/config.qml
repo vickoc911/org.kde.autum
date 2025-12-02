@@ -1,152 +1,377 @@
 /*
-    SPDX-FileCopyrightText: 2015 Ivan Safonov <safonov.ivan.s@gmail.com>
-    SPDX-FileCopyrightText: 2024 Steve Storey <sstorey@gmail.com>
-    SPDX-FileCopyrightText: 2024 Victor Calles <vcalles@gmail.com>
+    SPDX-FileCopyrightText: 2013 Marco Martin <mart@kde.org>
+    SPDX-FileCopyrightText: 2014 Kai Uwe Broulik <kde@privat.broulik.de>
+    SPDX-FileCopyrightText: 2019 David Redondo <kde@david-redondo.de>
 
     SPDX-License-Identifier: GPL-2.0-or-later
 */
+
 import QtQuick
-import QtQuick.Controls as QQC2
-import QtQuick.Dialogs as QQD2
-
+import QtQuick.Controls as QtControls2
+import QtQuick.Layouts
+import org.kde.plasma.wallpapers.image as PlasmaWallpaper
+import org.kde.kquickcontrols as KQuickControls
+import org.kde.kquickcontrolsaddons
+import org.kde.newstuff as NewStuff
+import org.kde.kcmutils as KCM
 import org.kde.kirigami as Kirigami
+import org.kde.config as KConfig
 
-Kirigami.FormLayout {
+/**
+ * For proper alignment, an ancestor **MUST** have id "appearanceRoot" and property "parentLayout"
+ */
+ColumnLayout {
     id: root
-    twinFormLayouts: parentLayout
 
-    // Image properties
+    property var configDialog
+    property var wallpaperConfiguration: wallpaper.configuration
+    property var parentLayout
+    property var screenSize: Qt.size(Screen.width, Screen.height)
+
+    property alias cfg_Color: colorButton.color
+    property color cfg_ColorDefault
     property string cfg_Image
+    property string cfg_ImageDefault
     property int cfg_FillMode
+    property int cfg_FillModeDefault
+    property int cfg_SlideshowMode
+    property int cfg_SlideshowModeDefault
+    property bool cfg_SlideshowFoldersFirst
+    property bool cfg_SlideshowFoldersFirstDefault: false
+    property alias cfg_Blur: blurRadioButton.checked
+    property bool cfg_BlurDefault
+    property var cfg_SlidePaths: []
+    property var cfg_SlidePathsDefault: []
+    property int cfg_SlideInterval: 0
+    property int cfg_SlideIntervalDefault: 0
+    property var cfg_UncheckedSlides: []
+    property var cfg_UncheckedSlidesDefault: []
+    property int cfg_DynamicMode: 0
 
     // Autumleaf properties
     property string cfg_Autumleaf
     property int cfg_Particles
     property int cfg_Size
-    property int cfg_Velocity
 
-    Kirigami.Separator {
-        id: backgroundSeparator
-        Kirigami.FormData.isSection: true
-        Kirigami.FormData.label: i18nd("plasma_applet_org.kde.autum", "Background")
-        visible: true
+    signal configurationChanged()
+    /**
+     * Emitted when the user finishes adding images using the file dialog.
+     */
+    signal wallpaperBrowseCompleted();
+
+    onScreenSizeChanged: function() {
+        if (thumbnailsLoader.item) {
+            thumbnailsLoader.item.screenSize = root.screenSize;
+        }
     }
 
-    QQC2.Button {
-        Kirigami.FormData.label: i18nd("plasma_applet_org.kde.autum", "Image:")
+    function saveConfig() {
+        if (configDialog.currentWallpaper === "org.kde.autum") {
+            imageWallpaper.wallpaperModel.commitAddition();
+            imageWallpaper.wallpaperModel.commitDeletion();
+        }
+        wallpaperConfiguration.PreviewImage = "null"; // internal, no need to save to file
+    }
 
-        // These realign the Image component up a bit
-        // to fix the default alignment
-        anchors.top: backgroundSeparator.top
-        anchors.topMargin: 6
+    function openChooserDialog() {
+        const dialogComponent = Qt.createComponent("AddFileDialog.qml");
+        dialogComponent.createObject(root);
+        dialogComponent.destroy();
+    }
 
-        width: 240
-        height: 135
+    function selectWallpaper(wallpaper: string, selectors: list<string>): void {
+        let selector = "";
+        if (selectors.includes("day-night")) {
+            if (cfg_DynamicMode == PlasmaWallpaper.DynamicMode.DayNight) {
+                selector = "day-night";
+            }
+        }
+        if (selectors.includes("dark-light")) {
+            if (cfg_DynamicMode == PlasmaWallpaper.DynamicMode.AlwaysLight) {
+                selector = "light"
+            } else if (cfg_DynamicMode == PlasmaWallpaper.DynamicMode.AlwaysDark) {
+                selector = "dark"
+            }
+        }
 
-        // Causes the width property to be honoured by the looks of things
-        text: "                                                    "
-        Image {
-            id: backgroundImage
-            anchors.margins: 2
+        cfg_Image = PlasmaWallpaper.WallpaperUrl.make(wallpaper, selector);
+        wallpaperConfiguration.PreviewImage = cfg_Image;
+    }
+
+    function selectDynamicMode(mode: PlasmaWallpaper.DynamicMode): void {
+        cfg_DynamicMode = mode;
+
+        selectWallpaper(thumbnailsLoader.item.view.currentItem.key,
+                        thumbnailsLoader.item.view.currentItem.selectors);
+    }
+
+    PlasmaWallpaper.ImageBackend {
+        id: imageWallpaper
+        renderingMode: (configDialog.currentWallpaper === "org.kde.autum") ? PlasmaWallpaper.ImageBackend.SingleImage : PlasmaWallpaper.ImageBackend.SlideShow
+        targetSize: {
+            // Lock screen configuration case
+            return Qt.size(root.screenSize.width * Screen.devicePixelRatio, root.screenSize.height * Screen.devicePixelRatio)
+        }
+        onSlidePathsChanged: cfg_SlidePaths = slidePaths
+        onUncheckedSlidesChanged: cfg_UncheckedSlides = uncheckedSlides
+        onSlideshowModeChanged: cfg_SlideshowMode = slideshowMode
+        onSlideshowFoldersFirstChanged: cfg_SlideshowFoldersFirst = slideshowFoldersFirst
+
+        onSettingsChanged: root.configurationChanged()
+    }
+
+    onCfg_FillModeChanged: {
+        resizeComboBox.setMethod()
+    }
+
+    onCfg_SlidePathsChanged: {
+        if (cfg_SlidePaths)
+            imageWallpaper.slidePaths = cfg_SlidePaths
+    }
+    onCfg_UncheckedSlidesChanged: {
+        if (cfg_UncheckedSlides)
+            imageWallpaper.uncheckedSlides = cfg_UncheckedSlides
+    }
+
+    onCfg_SlideshowModeChanged: {
+        if (cfg_SlideshowMode)
+            imageWallpaper.slideshowMode = cfg_SlideshowMode
+    }
+
+    onCfg_SlideshowFoldersFirstChanged: {
+        if (cfg_SlideshowFoldersFirst)
+            imageWallpaper.slideshowFoldersFirst = cfg_SlideshowFoldersFirst
+    }
+
+    spacing: 0
+
+    Kirigami.FormLayout {
+        id: formLayout
+
+        Layout.bottomMargin: configDialog.currentWallpaper === "org.kde.autum" ? Kirigami.Units.largeSpacing : 0
+
+        Component.onCompleted: function() {
+            if (typeof appearanceRoot !== "undefined") {
+                twinFormLayouts.push(appearanceRoot.parentLayout);
+            }
+        }
+
+        QtControls2.ComboBox {
+            id: resizeComboBox
+            Kirigami.FormData.label: i18ndc("plasma_wallpaper_org.kde.autum", "@label:listbox", "Positioning:")
+            model: [
+                        {
+                            'label': i18ndc("plasma_wallpaper_org.kde.autum", "@item:inlistbox", "Scaled and cropped"),
+                            'fillMode': Image.PreserveAspectCrop
+                        },
+                        {
+                            'label': i18ndc("plasma_wallpaper_org.kde.autum", "@item:inlistbox", "Scaled"),
+                            'fillMode': Image.Stretch
+                        },
+                        {
+                            'label': i18ndc("plasma_wallpaper_org.kde.autum", "@item:inlistbox", "Scaled, keep proportions"),
+                            'fillMode': Image.PreserveAspectFit
+                        },
+                        {
+                            'label': i18ndc("plasma_wallpaper_org.kde.autum", "@item:inlistbox", "Centered"),
+                            'fillMode': Image.Pad
+                        },
+                        {
+                            'label': i18ndc("plasma_wallpaper_org.kde.autum", "@item:inlistbox", "Tiled"),
+                            'fillMode': Image.Tile
+                        }
+            ]
+
+            textRole: "label"
+            onActivated: cfg_FillMode = model[currentIndex]["fillMode"]
+            Component.onCompleted: setMethod();
+
+            KCM.SettingHighlighter {
+                highlight: cfg_FillModeDefault != cfg_FillMode
+            }
+
+            function setMethod() {
+                for (var i = 0; i < model.length; i++) {
+                    if (model[i]["fillMode"] === root.cfg_FillMode) {
+                        resizeComboBox.currentIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        QtControls2.ButtonGroup { id: dayNightModeGroup }
+
+
+        RowLayout {
+            spacing: Kirigami.Units.smallSpacing
+            Kirigami.FormData.label: i18ndc("plasma_wallpaper_org.kde.autum", "@label:listbox part of a sentence: 'Switch dynamic wallpapers [based on]'", "Switch dynamic wallpapers:")
+
+            QtControls2.ComboBox {
+                valueRole: "dynamicMode"
+                textRole: "text"
+                model: [
+                    {
+                        dynamicMode: PlasmaWallpaper.DynamicMode.Automatic,
+                        text: i18ndc("plasma_wallpaper_org.kde.autum", "@item:inlistbox part of a sentence: 'Switch dynamic wallpapers'", "Based on whether the Plasma style is light or dark ")},
+                    {
+                        dynamicMode: PlasmaWallpaper.DynamicMode.DayNight, text: i18ndc("plasma_wallpaper_org.kde.autum", "@item:inlistbox part of a sentence: 'Switch dynamic wallpapers'", "Based on the day-night cycle")
+                    },
+                    {
+                        dynamicMode: PlasmaWallpaper.DynamicMode.AlwaysLight,
+                        text: i18ndc("plasma_wallpaper_org.kde.autum", "@item:inlistbox", "Always use light variant")
+                    },
+                    {
+                        dynamicMode: PlasmaWallpaper.DynamicMode.AlwaysDark,
+                        text: i18ndc("plasma_wallpaper_org.kde.autum", "@item:inlistbox", "Always use dark variant")
+                    }
+                ]
+                onActivated: root.selectDynamicMode(currentValue)
+                Component.onCompleted: currentIndex = indexOfValue(root.cfg_DynamicMode)
+            }
+
+            QtControls2.Button {
+                visible: root.cfg_DynamicMode == 1 
+                enabled: KConfig.KAuthorized.authorizeControlModule("kcm_nighttime")
+                text: i18nc("@action:button Configure day-night cycle times", "Configure…")
+                icon.name: "configure"
+                onClicked: KCM.KCMLauncher.open("kcm_nighttime")
+            }
+        }
+
+        // Autum properties
+        RowLayout {
+            spacing: Kirigami.Units.smallSpacing
+            Kirigami.FormData.label: i18nd("plasma_applet_org.kde.autum", "Autumleaf - number - size:")
+        QtControls2.ComboBox {
+            Kirigami.FormData.label: i18nd("plasma_applet_org.kde.autum", "Autumleaf:")
+
+            textRole: "name"
+            valueRole: 'filePath'
+            model: [{
+                name: "Leaf1",
+                filePath: "data/leaf1.png"
+            },{
+                name: "Leaf2",
+                filePath: "data/leaf2.png"
+            },{
+                name: "Leaf3",
+                filePath: "data/leaf3.png"
+            }]
+
+            Component.onCompleted: currentIndex = indexOfValue(cfg_Autumleaf)
+            onActivated: cfg_Autumleaf = currentValue
+        }
+
+        QtControls2.SpinBox {
+            Kirigami.FormData.label: i18nd("plasma_applet_org.kde.autum", "Number of autumleafs:")
+
+            value: cfg_Particles
+            from: 2
+            to: 30
+            onValueChanged: cfg_Particles = value
+        }
+
+        QtControls2.SpinBox {
+            Kirigami.FormData.label: i18nd("plasma_applet_org.kde.autum", "Size of autumleaf:")
+
+            value: cfg_Size
+            from: 8.0
+            to: 15.0
+            onValueChanged: cfg_Size = value
+        }
+        }
+
+        QtControls2.ButtonGroup { id: backgroundGroup }
+
+        QtControls2.RadioButton {
+            id: blurRadioButton
+            visible: cfg_FillMode === Image.PreserveAspectFit || cfg_FillMode === Image.Pad
+            Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.autum", "Background:")
+            text: i18nd("plasma_wallpaper_org.kde.autum", "Blur")
+            QtControls2.ButtonGroup.group: backgroundGroup
+        }
+
+        RowLayout {
+            id: colorRow
+            visible: cfg_FillMode === Image.PreserveAspectFit || cfg_FillMode === Image.Pad
+            QtControls2.RadioButton {
+                id: colorRadioButton
+                text: i18nd("plasma_wallpaper_org.kde.autum", "Solid color")
+                checked: !cfg_Blur
+                QtControls2.ButtonGroup.group: backgroundGroup
+
+                KCM.SettingHighlighter {
+                    highlight: cfg_Blur != cfg_BlurDefault
+                }
+            }
+            KQuickControls.ColorButton {
+                id: colorButton
+                color: cfg_Color
+                dialogTitle: i18nd("plasma_wallpaper_org.kde.autum", "Select Background Color")
+
+                KCM.SettingHighlighter {
+                    highlight: cfg_Color != cfg_ColorDefault
+                }
+            }
+        }
+    }
+
+    DropArea {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+
+        onEntered: drag => {
+            if (drag.hasUrls) {
+                drag.accept();
+            }
+        }
+        onDropped: drop => {
+            drop.urls.forEach(function (url) {
+                if (configDialog.currentWallpaper === "org.kde.autum") {
+                    imageWallpaper.addUsersWallpaper(url);
+                } else {
+                    imageWallpaper.addSlidePath(url);
+                }
+            });
+            // Scroll to top to view added images
+            if (configDialog.currentWallpaper === "org.kde.autum") {
+                thumbnailsLoader.item.view.positionViewAtIndex(0, GridView.Beginning);
+            }
+        }
+
+        Loader {
+            id: thumbnailsLoader
             anchors.fill: parent
-            fillMode: cfg_FillMode
-            source: cfg_Image
-            antialiasing: true
-            MouseArea {
-                anchors.fill: parent
-                onClicked: fileDialog.open()
+
+            function loadWallpaper () {
+                let source = (configDialog.currentWallpaper == "org.kde.autum") ? "ThumbnailsComponent.qml" :
+                    ((configDialog.currentWallpaper == "org.kde.slideshow") ? "SlideshowComponent.qml" : "");
+
+                let props = {screenSize: screenSize};
+
+                if (configDialog.currentWallpaper == "org.kde.slideshow") {
+                    props["configuration"] = wallpaperConfiguration;
+                }
+                thumbnailsLoader.setSource(source, props);
             }
         }
-    }
 
-    QQC2.ComboBox {
-        Kirigami.FormData.label: i18nd("plasma_applet_org.kde.autum", "Positioning:")
-
-        model: [
-            {
-                'label': i18nd("plasma_applet_org.kde.image", "Scaled and Cropped"),
-                'fillMode': Image.PreserveAspectCrop
-            },
-            {
-                'label': i18nd("plasma_applet_org.kde.image", "Scaled"),
-                'fillMode': Image.Stretch
-            },
-            {
-                'label': i18nd("plasma_applet_org.kde.image", "Scaled, Keep Proportions"),
-                'fillMode': Image.PreserveAspectFit
-            },
-            {
-                'label': i18nd("plasma_applet_org.kde.image", "Centered"),
-                'fillMode': Image.Pad
-            },
-            {
-                'label': i18nd("plasma_applet_org.kde.image", "Tiled"),
-                'fillMode': Image.Tile
+        Connections {
+            target: configDialog
+            function onCurrentWallpaperChanged() {
+                thumbnailsLoader.loadWallpaper();
             }
-        ]
-        textRole: "label"
-        valueRole: "fillMode"
-        // Set the initial currentIndex to the value stored in the config.
-        Component.onCompleted: currentIndex = indexOfValue(cfg_FillMode)
-        // Update the stored condfiguration when the selected value changes
-        onActivated: cfg_FillMode = currentValue
-    }
-
-    // Autum properties
-
-    Kirigami.Separator {
-        id: autumSeparator
-        Kirigami.FormData.isSection: true
-        Kirigami.FormData.label: i18nd("plasma_applet_org.kde.autum", "Autum")
-        visible: true
-    }
-
-    QQC2.ComboBox {
-        Kirigami.FormData.label: i18nd("plasma_applet_org.kde.autum", "Autumleaf:")
-
-        textRole: "name"
-        valueRole: 'filePath'
-        model: [{
-            name: "Leaf1",
-            filePath: "data/leaf1.png"
-        },{
-            name: "Leaf2",
-            filePath: "data/leaf2.png"
-        },{
-            name: "Leaf3",
-            filePath: "data/leaf3.png"
-        }]
-
-        Component.onCompleted: currentIndex = indexOfValue(cfg_Autumleaf)
-        onActivated: cfg_Autumleaf = currentValue
-    }
-
-    QQC2.SpinBox {
-        Kirigami.FormData.label: i18nd("plasma_applet_org.kde.autum", "Number of autumleafs:")
-
-        value: cfg_Particles
-        from: 2
-        to: 30
-        onValueChanged: cfg_Particles = value
-    }
-
-    QQC2.SpinBox {
-        Kirigami.FormData.label: i18nd("plasma_applet_org.kde.autum", "Size of autumleaf:")
-
-        value: cfg_Size
-        from: 8.0
-        to: 15.0
-        onValueChanged: cfg_Size = value
-    }
-
-    // Used for choosing the background image
-    QQD2.FileDialog {
-        id: fileDialog
-        title: i18nd("plasma_applet_org.kde.autum", "Please choose an image")
-        nameFilters: [ "Image files (*.jpg *.png)", "All files (*)" ]
-        onAccepted: {
-            cfg_Image = selectedFile
-            backgroundImage.source = selectedFile
         }
+
+        Component.onCompleted: () => {
+            thumbnailsLoader.loadWallpaper();
+        }
+
+    }
+
+    Component.onDestruction: {
+        if (wallpaperConfiguration)
+            wallpaperConfiguration.PreviewImage = "null";
     }
 }
