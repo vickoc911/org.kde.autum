@@ -1,6 +1,16 @@
 # org.kde.autum
 live wallpaper that simulates falling leaves in autumn
 
+How to install it:
+
+- Download it from GitHub.
+
+- Unzip it and rename the folder to org.kde.autum
+
+- Copy the folder to .local/share/plasma/wallpapers/ in your home directory.
+
+- That's it.
+
 ### ☕ Buy Me a Coffee!
 
 If this code helped you, your support allows me to continue maintenance.
