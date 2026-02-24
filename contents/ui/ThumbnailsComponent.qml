@@ -23,14 +23,14 @@ Item {
     property var screenSize: Qt.size(Screen.width, Screen.height)
 
 
-    readonly property QtObject imageModel: (configDialog.currentWallpaper === "org.kde.autum") ? sortedWallpaperModel : imageWallpaper.slideFilterModel
+    readonly property QtObject imageModel: (configDialog.currentWallpaper === "org.kde.image") ? sortedWallpaperModel : imageWallpaper.slideFilterModel
 
     KItemModels.KSortFilterProxyModel  {
         id: sortedWallpaperModel
         sortRole: Qt.DisplayRole
         sortCaseSensitivity: Qt.CaseInsensitive
         sortColumn: 0
-        sourceModel: (configDialog.currentWallpaper === "org.kde.autum") ? imageWallpaper.wallpaperModel : null
+        sourceModel: (configDialog.currentWallpaper === "org.kde.image") ? imageWallpaper.wallpaperModel : null
         function indexOf(image : string) : int {
             if (!sourceModel) {
                 return -1
@@ -58,7 +58,7 @@ Item {
             if (loading) {
                 return;
             }
-            if (configDialog.currentWallpaper === "org.kde.autum" && imageModel.indexOf(cfg_Image) < 0) {
+            if (configDialog.currentWallpaper === "org.kde.image" && imageModel.indexOf(cfg_Image) < 0) {
                 imageWallpaper.addUsersWallpaper(cfg_Image);
             }
             wallpapersGrid.resetCurrentIndex();
@@ -86,19 +86,30 @@ Item {
         // headerPositioning: property; see https://bugreports.qt.io/browse/QTBUG-117035.
         Kirigami.InlineViewHeader {
             Layout.fillWidth: true
-            text: i18nd("plasma_wallpaper_org.kde.autum", "Images")
+            text: i18nd("plasma_wallpaper_org.kde.image", "Images")
+            QQC2.ToolButton {
+                icon.name: "document-open-folder"
+                text: i18nd("plasma_wallpaper_org.kde.image", "Open Folder…")
+              //  display: QQC2.Button
+                onClicked: Qt.openUrlExternally(homePath)
+
+                QQC2.ToolTip.visible: hovered
+                QQC2.ToolTip.text: text
+                QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+            }
             actions: [
                 Kirigami.Action {
                     icon.name: "list-add-symbolic"
-                    text: i18ndc("plasma_wallpaper_org.kde.autum", "@action:button the thing being added is an image file", "Add…")
-                    Accessible.name: i18ndc("plasma_wallpaper_org.kde.autum", "@action:button", "Add Wallpaper Image…")
-                    visible: configDialog.currentWallpaper == "org.kde.autum"
+                    text: i18ndc("plasma_wallpaper_org.kde.image", "@action:button the thing being added is an image file", "Add…")
+                    Accessible.name: i18ndc("plasma_wallpaper_org.kde.image", "@action:button", "Add Wallpaper Image…")
+                    visible: configDialog.currentWallpaper == "org.kde.Image"
                     onTriggered: root.openChooserDialog();
                 },
                 NewStuff.Action {
                     configFile: Kirigami.Settings.isMobile ? "wallpaper-mobile.knsrc" : "wallpaper.knsrc"
-                    text: i18ndc("plasma_wallpaper_org.kde.autum", "@action:button the new things being gotten are wallpapers", "Get New…")
-                    Accessible.name: i18ndc("plasma_wallpaper_org.kde.autum", "@action:button", "Get New Wallpaper Images…")
+                    text: i18ndc("plasma_wallpaper_org.kde.image", "@action:button the new things being gotten are wallpapers", "Get New…")
+                    Accessible.name: i18ndc("plasma_wallpaper_org.kde.image", "@action:button", "Get New Wallpaper Images…")
+                    visible: configDialog.currentWallpaper == "org.kde.Image"
                     viewMode: NewStuff.Page.ViewMode.Preview
                 }
             ]
@@ -122,8 +133,8 @@ Item {
                 function resetCurrentIndex() {
                     //that min is needed as the module will be populated in an async way
                     //and only on demand so we can't ensure it already exists
-                    if (configDialog.currentWallpaper === "org.kde.autum") {
-                        wallpapersGrid.view.currentIndex = Qt.binding(() => configDialog.currentWallpaper === "org.kde.autum" ?  Math.min(imageModel.indexOf(cfg_Image), imageModel.count - 1) : 0);
+                    if (configDialog.currentWallpaper === "org.kde.image") {
+                        wallpapersGrid.view.currentIndex = Qt.binding(() => configDialog.currentWallpaper === "org.kde.image" ?  Math.min(imageModel.indexOf(cfg_Image), imageModel.count - 1) : 0);
                     }
                 }
 
@@ -155,6 +166,6 @@ Item {
 
     KCM.SettingHighlighter {
         target: wallpapersGrid
-        highlight: configDialog.currentWallpaper === "org.kde.autum" && cfg_Image != cfg_ImageDefault
+        highlight: configDialog.currentWallpaper === "org.kde.image" && cfg_Image != cfg_ImageDefault
     }
 }

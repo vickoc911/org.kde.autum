@@ -31,19 +31,19 @@ KCM.GridDelegate {
     actions: [
         Kirigami.Action {
             icon.name: "document-open-folder"
-            tooltip: i18nd("plasma_wallpaper_org.kde.autum", "Open Containing Folder")
+            tooltip: i18nd("plasma_wallpaper_org.kde.image", "Open Containing Folder")
             onTriggered: imageModel.openContainingFolder(index)
         },
         Kirigami.Action {
             icon.name: "edit-undo"
             visible: model.pendingDeletion
-            tooltip: i18nd("plasma_wallpaper_org.kde.autum", "Restore wallpaper")
+            tooltip: i18nd("plasma_wallpaper_org.kde.image", "Restore wallpaper")
             onTriggered: model.pendingDeletion = false
         },
         Kirigami.Action {
             icon.name: "edit-delete-remove"
-            tooltip: i18nd("plasma_wallpaper_org.kde.autum", "Remove Wallpaper")
-            visible: model.removable && !model.pendingDeletion && configDialog.currentWallpaper == "org.kde.autum"
+            tooltip: i18nd("plasma_wallpaper_org.kde.image", "Remove Wallpaper")
+            visible: model.removable && !model.pendingDeletion && configDialog.currentWallpaper == "org.kde.image"
             onTriggered: {
                 model.pendingDeletion = true;
 
@@ -94,7 +94,7 @@ KCM.GridDelegate {
         }
 
         QtControls2.CheckBox {
-            visible: configDialog.currentWallpaper === "org.kde.slideshow"
+            visible: configDialog.currentWallpaper === "org.kde.autum"
             anchors.left: parent.left
             anchors.margins: Kirigami.Units.smallSpacing
             anchors.top: parent.top
@@ -130,7 +130,7 @@ KCM.GridDelegate {
     }
 
     onClicked: {
-        if (configDialog.currentWallpaper === "org.kde.autum") {
+        if (configDialog.currentWallpaper === "org.kde.image") {
             root.selectWallpaper(key, selectors);
         } else {
             model.checked = !model.checked

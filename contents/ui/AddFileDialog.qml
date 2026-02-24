@@ -12,7 +12,7 @@ Loader {
     id: dialogLoader
 
     asynchronous: true
-    sourceComponent: configDialog.currentWallpaper === "org.kde.autum" ? addFileDialog : addFolderDialog
+    sourceComponent: configDialog.currentWallpaper === "org.kde.image" ? addFileDialog : addFolderDialog
 
     readonly property url defaultFolder: {
         let defaultPaths = StandardPaths.standardLocations(StandardPaths.PicturesLocation);
@@ -55,7 +55,7 @@ Loader {
             nameFilters: imageWallpaper.nameFilters()
             fileMode: QtDialogs.FileDialog.OpenFiles
             options: QtDialogs.FileDialog.ReadOnly
-            title: i18ndc("plasma_wallpaper_org.kde.autum", "@title:window", "Open Image")
+            title: i18ndc("plasma_wallpaper_org.kde.image", "@title:window", "Open Image")
         }
     }
 

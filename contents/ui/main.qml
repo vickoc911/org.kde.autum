@@ -19,7 +19,7 @@ WallpaperItem {
 
     // used by WallpaperInterface for drag and drop
     onOpenUrlRequested: (url) => {
-        if (root.pluginName === "org.kde.autum") {
+        if (root.pluginName === "org.kde.image") {
             const result = imageWallpaper.addUsersWallpaper(url);
             if (result.length > 0) {
                 // Can be a file or a folder (KPackage)
@@ -33,17 +33,17 @@ WallpaperItem {
         root.configuration.writeConfig();
     }
 
-    contextualActions: root.pluginName === "org.kde.slideshow" ? [openWallpaperAction, imageWallpaper.nextSlideAction] : []
+    contextualActions: root.pluginName === "org.kde.autum" ? [openWallpaperAction, imageWallpaper.nextSlideAction] : []
 
     PlasmaCore.Action {
         id: openWallpaperAction
-        text: i18nd("plasma_wallpaper_org.kde.autum", "Open Wallpaper Image")
+        text: i18nd("plasma_wallpaper_org.kde.image", "Open Wallpaper Image")
         icon.name: "document-open"
         onTriggered: imageView.mediaProxy.openModelImage();
     }
 
     Connections {
-		enabled: root.pluginName === "org.kde.slideshow"
+		enabled: root.pluginName === "org.kde.autum"
         target: Qt.application
         function onAboutToQuit() {
             root.configuration.writeConfig(); // Save the last position
@@ -64,7 +64,7 @@ WallpaperItem {
         configColor: root.configuration.Color
         blur: root.configuration.Blur
         source: {
-            if (root.pluginName === "org.kde.slideshow") {
+            if (root.pluginName === "org.kde.autum") {
                 return imageWallpaper.image;
             }
             if (root.configuration.PreviewImage !== "null") {
@@ -82,7 +82,7 @@ WallpaperItem {
             configMap: root.configuration
             usedInConfig: false
             //the oneliner of difference between image and slideshow wallpapers
-            renderingMode: (root.pluginName === "org.kde.autum") ? Wallpaper.ImageBackend.SingleImage : Wallpaper.ImageBackend.SlideShow
+            renderingMode: (root.pluginName === "org.kde.image") ? Wallpaper.ImageBackend.SingleImage : Wallpaper.ImageBackend.SlideShow
             targetSize: imageView.sourceSize
             slidePaths: root.configuration.SlidePaths
             slideTimer: root.configuration.SlideInterval
@@ -177,7 +177,7 @@ WallpaperItem {
     }
 
     Component.onDestruction: {
-        if (root.pluginName === "org.kde.slideshow") {
+        if (root.pluginName === "org.kde.autum") {
             root.configuration.writeConfig(); // Save the last position
         }
     }
