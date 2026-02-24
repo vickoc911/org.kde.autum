@@ -12,23 +12,15 @@
     </entry>
     <entry name="Color" type="Color">
       <label>Color of the wallpaper</label>
-      <default>#ffffff</default>
+      <default>#000000</default>
     </entry>
     <entry name="Image" type="String">
       <label>Wallpaper image path or wallpaper name</label>
       <default></default>
     </entry>
-    <entry name="PreviewImage" type="String">
-      <label>Wallpaper preview image path</label>
-      <default>null</default>
-    </entry>
     <entry name="FillMode" type="int">
       <label>Sizing, cropping and positioning of the wallpaper image</label>
-      <default>2</default>
-    </entry>
-    <entry name="SlideshowFoldersFirst" type="bool">
-      <label>Display folders first when on slideshow</label>
-      <default>false</default>
+      <default>0</default>
     </entry>
     <entry name="SlidePaths" type="StringList">
       <label>Paths used for the slideshow</label>
@@ -44,15 +36,11 @@
     </entry>
     <entry name="SlideshowMode" type="int">
         <label>Ordering mode for the slideshow</label>
-        <default>0</default>
+        <default>1</default>
     </entry>
-    <entry name="DynamicMode" type="UInt">
-        <label>Preferred dynamic wallpaper mode: 0 = switch based on whether the Plasma style is dark or light, 1 = switch at sunrise and sunset</label>
-        <default>0</default>
-    </entry>
-    <entry name="DarkLightScheduleState" type="String">
-      <label>Saved dark light schedule state</label>
-      <default></default>
+    <entry name="SlideshowFoldersFirst" type="bool">
+        <label>Processing folders first for the slideshow</label>
+        <default>false</default>
     </entry>
     <entry name="Particles" type="int">
       <label>Number of autumleafs on the screen</label>
